@@ -13,7 +13,7 @@ if 'VLLM_CPU_OMP_THREADS_BIND' in os.environ:
 os.environ['VLLM_CPU_ONLY'] = '1'
 
 from vllm import LLM, SamplingParams
-from vllm.config import CompilationConfig
+from vllm.config import CompilationConfig, CompilationMode
 
 def run_canned_demo(llm, sampling_params):
     """Run demo with canned inputs for quick testing."""
@@ -173,7 +173,7 @@ def main():
             enforce_eager=False,  # Enable compilation for faster inference
             disable_log_stats=True,
             compilation_config=CompilationConfig(
-                level=0,
+                mode=CompilationMode.VLLM_COMPILE,
                 debug_dump_path="/tmp/vllm_ir_dumps"  # Dump IR and generated code
             )
         )
