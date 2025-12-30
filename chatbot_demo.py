@@ -11,6 +11,12 @@ if 'VLLM_CPU_OMP_THREADS_BIND' in os.environ:
 
 # Configure for CPU
 os.environ['VLLM_CPU_ONLY'] = '1'
+# Enable debug logging for compilation
+os.environ['VLLM_LOGGING_LEVEL'] = 'DEBUG'
+# Enable torch compile logging and IR dumps
+os.environ['TORCH_LOGS'] = '+dynamo,+recompiles,+output_code'
+os.environ['TORCH_COMPILE_DEBUG'] = '1'
+os.environ['TORCHINDUCTOR_CACHE_DIR'] = '/tmp/inductor_cache'
 
 from vllm import LLM, SamplingParams
 from vllm.config import CompilationConfig, CompilationMode
