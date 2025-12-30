@@ -11,8 +11,15 @@ if 'VLLM_CPU_OMP_THREADS_BIND' in os.environ:
 
 # Configure for CPU
 os.environ['VLLM_CPU_ONLY'] = '1'
+# Enable debug logging for compilation
+os.environ['VLLM_LOGGING_LEVEL'] = 'INFO'
+# Enable torch compile logging and IR dumps
+os.environ['TORCH_LOGS'] = '+dynamo,+recompiles,+output_code'
+# os.environ['TORCH_COMPILE_DEBUG'] = '1'
+os.environ['TORCHINDUCTOR_CACHE_DIR'] = '/tmp/inductor_cache'
 
 from vllm import LLM, SamplingParams
+from vllm.config import CompilationConfig, CompilationMode
 
 def run_canned_demo(llm, sampling_params):
     """Run demo with canned inputs for quick testing."""
@@ -156,18 +163,52 @@ def main():
 
     selected_model = models[model_choice]
 
+    # Compilation mode selection
+    print("\n" + "=" * 70)
+    print("Select compilation mode:")
+    print("  1. DYNAMO_TRACE_ONCE (default) - Fast compilation, good performance")
+    print("  2. VLLM_COMPILE - Slow compilation, best performance")
+    print("=" * 70)
+    print("\nNote: VLLM_COMPILE uses piecewise compilation which is very slow")
+    print("on CPU but may provide better runtime performance.")
+
+    try:
+        compile_choice = input("\nEnter choice (1 or 2, press Enter for default): ").strip()
+    except (EOFError, KeyboardInterrupt):
+        print("\nDefaulting to DYNAMO_TRACE_ONCE...")
+        compile_choice = "1"
+
+    if compile_choice == "2":
+        print("Selected: VLLM_COMPILE (piecewise compilation)")
+        compilation_mode = CompilationMode.VLLM_COMPILE
+        # Set env var to prevent CPU platform from overriding
+        os.environ['VLLM_ALLOW_CPU_VLLM_COMPILE'] = '1'
+    else:
+        if compile_choice and compile_choice != "1":
+            print(f"Invalid choice '{compile_choice}', defaulting to DYNAMO_TRACE_ONCE...")
+        else:
+            print("Selected: DYNAMO_TRACE_ONCE (fast compilation)")
+        compilation_mode = CompilationMode.DYNAMO_TRACE_ONCE
+
     print(f"\nLoading model with vLLM (CPU mode)...")
     print(f"Model: {selected_model['name']}\n")
     print("Note: This uses vLLM V1 engine (dev build)")
-    print("V1 engine on CPU may have stability issues in development builds\n")
+    print("V1 engine on CPU may have stability issues in development builds")
+    print("IR dumps will be saved to: /tmp/torchinductor_$USER/\n")
 
     try:
         # Initialize vLLM with CPU settings
+        # Note: Using compilation (torch.compile with inductor backend)
+        # for better inference performance after initial warmup
         llm = LLM(
             model=selected_model["path"],
             max_model_len=selected_model["max_len"],
-            enforce_eager=True,
+            enforce_eager=False,  # Enable compilation for faster inference
             disable_log_stats=True,
+            compilation_config=CompilationConfig(
+                mode=compilation_mode,
+                debug_dump_path="/tmp/vllm_ir_dumps"  # Dump IR and generated code
+            )
         )
     except Exception as e:
         print(f"❌ Failed to load model: {e}")
