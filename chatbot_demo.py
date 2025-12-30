@@ -13,6 +13,7 @@ if 'VLLM_CPU_OMP_THREADS_BIND' in os.environ:
 os.environ['VLLM_CPU_ONLY'] = '1'
 
 from vllm import LLM, SamplingParams
+from vllm.config import CompilationConfig
 
 def run_canned_demo(llm, sampling_params):
     """Run demo with canned inputs for quick testing."""
@@ -159,7 +160,8 @@ def main():
     print(f"\nLoading model with vLLM (CPU mode)...")
     print(f"Model: {selected_model['name']}\n")
     print("Note: This uses vLLM V1 engine (dev build)")
-    print("V1 engine on CPU may have stability issues in development builds\n")
+    print("V1 engine on CPU may have stability issues in development builds")
+    print("IR dumps will be saved to: /tmp/vllm_ir_dumps\n")
 
     try:
         # Initialize vLLM with CPU settings
@@ -170,6 +172,10 @@ def main():
             max_model_len=selected_model["max_len"],
             enforce_eager=False,  # Enable compilation for faster inference
             disable_log_stats=True,
+            compilation_config=CompilationConfig(
+                level=0,
+                debug_dump_path="/tmp/vllm_ir_dumps"  # Dump IR and generated code
+            )
         )
     except Exception as e:
         print(f"❌ Failed to load model: {e}")
