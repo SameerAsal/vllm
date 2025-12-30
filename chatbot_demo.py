@@ -115,16 +115,57 @@ def run_interactive_demo(llm, sampling_params):
         print(f"🤖 Bot: {response}")
 
 def main():
-    print("Loading model with vLLM (CPU mode)...")
-    print("Model: facebook/opt-125m (125M parameters)\n")
+    # Model selection
+    models = {
+        "1": {
+            "name": "facebook/opt-125m",
+            "path": "facebook/opt-125m",
+            "description": "OPT-125M (125M params) - Very fast, basic quality",
+            "max_len": 512,
+        },
+        "2": {
+            "name": "Qwen2.5-1.5B-Instruct",
+            "path": "/home/sameer/git/LLMs/Qwen2.5-1.5B-Instruct",
+            "description": "Qwen2.5-1.5B (1.5B params) - Better quality, moderate speed",
+            "max_len": 2048,
+        },
+        "3": {
+            "name": "SmolLM-1.7B-Instruct",
+            "path": "/home/sameer/git/LLMs/SmolLM-1.7B-Instruct",
+            "description": "SmolLM-1.7B (1.7B params) - Good quality, moderate speed",
+            "max_len": 2048,
+        },
+    }
+
+    print("=" * 70)
+    print("Select model:")
+    for key, model in models.items():
+        print(f"  {key}. {model['description']}")
+    print("=" * 70)
+
+    try:
+        model_choice = input("\nEnter choice (1, 2, or 3, press Enter for default): ").strip()
+    except (EOFError, KeyboardInterrupt):
+        print("\nDefaulting to OPT-125M...")
+        model_choice = "1"
+
+    if model_choice not in models:
+        if model_choice:
+            print(f"Invalid choice '{model_choice}', defaulting to OPT-125M...")
+        model_choice = "1"
+
+    selected_model = models[model_choice]
+
+    print(f"\nLoading model with vLLM (CPU mode)...")
+    print(f"Model: {selected_model['name']}\n")
     print("Note: This uses vLLM V1 engine (dev build)")
     print("V1 engine on CPU may have stability issues in development builds\n")
 
     try:
         # Initialize vLLM with CPU settings
         llm = LLM(
-            model="facebook/opt-125m",
-            max_model_len=256,  # Reduced for faster loading on CPU
+            model=selected_model["path"],
+            max_model_len=selected_model["max_len"],
             enforce_eager=True,
             disable_log_stats=True,
         )
@@ -136,11 +177,13 @@ def main():
 
     print("✅ vLLM model loaded successfully on CPU!\n")
 
-    # Sampling parameters
+    # Sampling parameters - adjust max_tokens based on model size
+    max_tokens = 512 if selected_model["name"] == "facebook/opt-125m" else 1024
+
     sampling_params = SamplingParams(
         temperature=0.8,
         top_p=0.95,
-        max_tokens=80,
+        max_tokens=max_tokens,
         repetition_penalty=1.2,
     )
 
