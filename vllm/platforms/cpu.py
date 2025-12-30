@@ -250,7 +250,10 @@ class CpuPlatform(Platform):
             else:
                 backend = "inductor"
 
-            compilation_config.mode = CompilationMode.DYNAMO_TRACE_ONCE
+            # By default, override VLLM_COMPILE to DYNAMO_TRACE_ONCE for faster compilation
+            # Users can set VLLM_ALLOW_CPU_VLLM_COMPILE=1 to keep VLLM_COMPILE mode
+            if os.environ.get("VLLM_ALLOW_CPU_VLLM_COMPILE", "0") == "0":
+                compilation_config.mode = CompilationMode.DYNAMO_TRACE_ONCE
             compilation_config.backend = backend
             compilation_config.inductor_compile_config.update(
                 {
@@ -388,7 +391,7 @@ class CpuPlatform(Platform):
         if env_key in os.environ and os.environ[env_key] != "":
             visible_nodes = [int(s) for s in os.environ[env_key].split(",")]
             allowed_numa_nodes_list = [
-                x for x in visible_nodes if x in allowed_cpu_id_list
+                x for x in visible_nodes if x in allowed_numa_nodes
             ]
 
         return allowed_numa_nodes_list, logical_cpu_list
