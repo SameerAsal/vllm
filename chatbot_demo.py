@@ -163,10 +163,12 @@ def main():
 
     try:
         # Initialize vLLM with CPU settings
+        # Note: Using compilation (torch.compile with inductor backend)
+        # for better inference performance after initial warmup
         llm = LLM(
             model=selected_model["path"],
             max_model_len=selected_model["max_len"],
-            enforce_eager=True,
+            enforce_eager=False,  # Enable compilation for faster inference
             disable_log_stats=True,
         )
     except Exception as e:
